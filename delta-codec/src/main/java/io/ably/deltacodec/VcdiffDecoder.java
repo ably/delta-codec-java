@@ -12,7 +12,7 @@ import java.util.Objects;
  * VCDIFF decoder capable of processing continuous sequences of consecutively generated VCDIFFs
  */
 public class VcdiffDecoder {
-    private final VCDiffDecoder decoder = VCDiffDecoderBuilder.builder().buildSimple();
+    private final static VCDiffDecoder decoder = VCDiffDecoderBuilder.builder().buildSimple();
     private byte[] base;
     private String baseId;
 
@@ -30,15 +30,21 @@ public class VcdiffDecoder {
         if (this.base == null) {
             throw new IllegalStateException("Uninitialized decoder - setBase() should be called first");
         }
+        ByteArrayOutputStream decoded = applyDeltaInternal(delta, this.base);
+        this.base = decoded.toByteArray();
+        // Return a copy to avoid future delta application failures if the returned array is modified
+        return new DeltaApplicationResult(decoded.toByteArray());
+    }
+
+    private static ByteArrayOutputStream applyDeltaInternal(Object delta, Object previousData) throws IOException {
         byte[] deltaAsByteArray = tryConvertToDeltaByteArray(delta);
         if (deltaAsByteArray == null || !hasVcdiffHeader(deltaAsByteArray)) {
             throw new IllegalArgumentException("The provided delta is not a valid VCDIFF delta");
         }
+        byte[] previousDataByteArray = convertToByteArray(previousData);
         ByteArrayOutputStream decoded = new ByteArrayOutputStream();
-        this.decoder.decode(this.base, deltaAsByteArray, decoded);
-        this.base = decoded.toByteArray();
-        // Return a copy to avoid future delta application failures if the returned array is modified
-        return new DeltaApplicationResult(decoded.toByteArray());
+        decoder.decode(previousDataByteArray, deltaAsByteArray, decoded);
+        return decoded;
     }
 
     /**
@@ -84,6 +90,15 @@ public class VcdiffDecoder {
     public void setBase(Object newBase, String newBaseId) {
         this.setBase(newBase);
         this.baseId = newBaseId;
+    }
+
+    public static byte[] decode (Object delta, Object previousData) throws IOException {
+        try {
+            return applyDeltaInternal(delta, previousData).toByteArray();
+        }
+        catch (IOException ioEx) {
+            throw ioEx;
+        }
     }
 
     private static boolean hasVcdiffHeader(byte[] delta) {
