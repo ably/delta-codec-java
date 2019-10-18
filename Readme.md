@@ -38,9 +38,13 @@ repositories {
 
 ## Use
 
+The `VcdiffDecoder` class is the entry point to the public API. It provides a stateful and stateless way of applying `vcdiff` deltas.
+
+### Stateful Delta Application
 
 
 
+### Stateless Delta Application
 
 
 
