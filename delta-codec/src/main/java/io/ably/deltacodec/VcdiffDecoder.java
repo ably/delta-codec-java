@@ -27,10 +27,36 @@ public class VcdiffDecoder {
      * @throws IllegalArgumentException The provided {@code delta} is not a valid VCDIFF
      */
     public DeltaApplicationResult applyDelta(Object delta) throws IllegalStateException, IllegalArgumentException, IOException {
+        return this.applyDelta(delta, false);
+    }
+
+    /**
+     * Applies the {@code delta} to the result of applying the previous delta or to the base data
+     * if no previous delta has been applied yet. Base data has to be set by {@link VcdiffDecoder#setBase(Object)}
+     * before calling this method for the first time.
+     * @param delta The delta to be applied
+     * @param isBase64Encoded Whether the delta is base64 encoded
+     * @return {@link DeltaApplicationResult} instance
+     * @throws IOException Delta application failed
+     * @throws IllegalStateException The decoder is not initialized by calling {@link VcdiffDecoder#setBase(Object)}
+     * @throws IllegalArgumentException The provided {@code delta} is not a valid VCDIFF
+     */
+    public DeltaApplicationResult applyDelta(Object delta, boolean isBase64Encoded) throws IllegalStateException, IllegalArgumentException, IOException {
         if (this.base == null) {
             throw new IllegalStateException("Uninitialized decoder - setBase() should be called first");
         }
-        byte[] deltaAsByteArray = tryConvertToDeltaByteArray(delta);
+
+        byte[] deltaAsByteArray;
+
+        if (isBase64Encoded) {
+            deltaAsByteArray = tryConvertFromBase64String((String)delta);
+        } else {
+            if (!(delta instanceof byte[])) {
+                throw new IllegalStateException("The provided delta does not represent binary data");
+            }
+
+            deltaAsByteArray = (byte[])delta;
+        }
         if (deltaAsByteArray == null || !hasVcdiffHeader(deltaAsByteArray)) {
             throw new IllegalArgumentException("The provided delta is not a valid VCDIFF delta");
         }
@@ -56,7 +82,28 @@ public class VcdiffDecoder {
         if (!Objects.equals(this.baseId, baseId)) {
             throw new SequenceContinuityException(baseId, this.baseId);
         }
-        DeltaApplicationResult result = this.applyDelta(delta);
+        DeltaApplicationResult result = this.applyDelta(delta, false);
+        this.baseId = deltaId;
+        return result;
+    }
+
+    /**
+     * Applies the {@code delta} to the result of applying the previous delta or to the base data
+     * if no previous delta has been applied yet. Base data has to be set by {@link VcdiffDecoder#setBase(Object, String)}
+     * before calling this method for the first time.
+     * @param delta The delta to be applied
+     * @param isBase64Encoded Whether the delta is base64 encoded
+     * @return {@link DeltaApplicationResult} instance
+     * @throws IOException Delta application failed
+     * @throws IllegalStateException The decoder is not initialized by calling {@link VcdiffDecoder#setBase(Object, String)}
+     * @throws IllegalArgumentException The provided {@code delta} is not a valid VCDIFF
+     * @throws SequenceContinuityException The provided {@code baseId} does not match the last preserved sequence ID
+     */
+    public DeltaApplicationResult applyDelta(Object delta, String deltaId, String baseId, boolean isBase64Encoded) throws SequenceContinuityException, IllegalStateException, IllegalArgumentException, IOException {
+        if (!Objects.equals(this.baseId, baseId)) {
+            throw new SequenceContinuityException(baseId, this.baseId);
+        }
+        DeltaApplicationResult result = this.applyDelta(delta, isBase64Encoded);
         this.baseId = deltaId;
         return result;
     }
@@ -67,11 +114,21 @@ public class VcdiffDecoder {
      * @throws IllegalArgumentException The provided {@code newBase} parameter is null
      */
     public void setBase(Object newBase) throws IllegalArgumentException {
+        this.setBase(newBase, false);
+    }
+
+    /**
+     * Sets the base object used for the next delta application (see {@link VcdiffDecoder#applyDelta(Object)}).
+     * @param newBase The base object to be set
+     * @param isBase64Encoded Whether the base is base64 encoded
+     * @throws IllegalArgumentException The provided {@code newBase} parameter is null
+     */
+    public void setBase(Object newBase, boolean isBase64Encoded) throws IllegalArgumentException {
         if (newBase == null) {
             throw new IllegalArgumentException("newBase cannot be null");
         }
         
-        this.base = convertToByteArray(newBase);
+        this.base = isBase64Encoded ? convertFromBase64String((String)newBase) : convertToByteArray(newBase);
     }
 
     /**
@@ -82,7 +139,7 @@ public class VcdiffDecoder {
      * @throws IllegalArgumentException The provided {@code newBase} parameter is null
      */
     public void setBase(Object newBase, String newBaseId) {
-        this.setBase(newBase);
+        this.setBase(newBase, false);
         this.baseId = newBaseId;
     }
 
@@ -98,32 +155,21 @@ public class VcdiffDecoder {
             return (byte[])data;
         } else if (data instanceof String) {
             String dataAsString = (String)data;
-            byte[] base64DecodeResult = tryConvertFromBase64String(dataAsString);
-            if (base64DecodeResult != null) {
-                return base64DecodeResult;
-            } else {
-                return dataAsString.getBytes(StandardCharsets.UTF_8);
-            }
+            return dataAsString.getBytes(StandardCharsets.UTF_8);
         } else {
-            return JsonHelper.getInstance().serialize(data).getBytes(StandardCharsets.UTF_8);
-        }
-    }
-
-    private static byte[] tryConvertToDeltaByteArray(Object obj) {
-        if (obj instanceof byte[]) {
-            return (byte[])obj;
-        } else if (obj instanceof String) {
-            return tryConvertFromBase64String((String)obj);
-        } else {
-            return null;
+            throw new IllegalArgumentException("Unsupported data type. Supported types: String, byte[].");
         }
     }
 
     private static byte[] tryConvertFromBase64String(String str) {
         try {
-            return Base64Coder.decode(str);
+            return convertFromBase64String(str);
         } catch (IllegalArgumentException e) {
             return null;
         }
+    }
+
+    private static byte[] convertFromBase64String(String str) {
+        return Base64Coder.decode(str);
     }
 }
