@@ -18,7 +18,7 @@ public class Main {
                     channel.subscribe(new ChannelBase.MessageListener() {
                         @Override
                         public void onMessage(Message message) {
-                            Object data = message.data;
+                            String data = (String)message.data;
                             try {
                                 MessageExtras extras = Serialisation.gson.fromJson(message.extras, MessageExtras.class);
                                 if (extras != null && extras.delta != null) {
