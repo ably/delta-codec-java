@@ -1,8 +1,11 @@
 package io.ably.deltacodec;
 
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.rules.ExpectedException;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
 
@@ -21,62 +24,53 @@ public class VcdiffDecoderTest {
         decoder = null;
     }
 
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
     @Test
     public void setBaseThrowsIllegalArgumentExceptionWhenNewBaseIsNull() {
-        try {
-            this.decoder.setBase(null);
-        } catch (IllegalArgumentException ex) {
-            assertEquals("newBase cannot be null", ex.getMessage());
-        }
+        thrown.expect(IllegalArgumentException.class);
+        thrown.expectMessage("newBase cannot be null");
+        this.decoder.setBase((byte[])null);
     }
 
     @Test
     public void applyDeltaThrowsIllegalStateExceptionWhenBaseIsNull() throws IOException {
-        try{
-            this.decoder.applyDelta(null);
-        } catch (IllegalStateException ex) {
-            assertEquals("Uninitialized decoder - setBase() should be called first", ex.getMessage());
-        }
+        thrown.expect(IllegalStateException.class);
+        thrown.expectMessage("Uninitialized decoder - setBase() should be called first");
+        this.decoder.applyDelta((byte[])null);
     }
 
     @Test
-    public void applyDeltaThrowsIllegalStateExceptionWhenDeltaIsNotInBinaryFormatAndIsBase64EncodedArgumentIsFalse() throws IOException {
-        try{
-            this.decoder.setBase("baseContent");
-            this.decoder.applyDelta("deltaContent");
-        } catch (IllegalStateException ex) {
-            assertEquals("The provided delta does not represent binary data", ex.getMessage());
-        }
+    public void applyDeltaThrowsIllegalStateExceptionWhenDeltaIsNotBase64Encoded() throws IOException {
+        thrown.expect(IllegalStateException.class);
+        thrown.expectMessage("The provided delta does not represent binary data");
+        this.decoder.setBase("baseContent");
+        this.decoder.applyDelta("!deltaContent");
     }
 
     @Test
     public void applyDeltaThrowsIllegalArgumentExceptionWhenDeltaDoesNotContainVcdiffHeaderAndIsBase64EncodedArgumentIsFalse() throws IOException {
-        try{
-            this.decoder.setBase("baseContent");
-            this.decoder.applyDelta(new byte[1]);
-        } catch (IllegalArgumentException ex) {
-            assertEquals("The provided delta is not a valid VCDIFF delta", ex.getMessage());
-        }
+        thrown.expect(IllegalArgumentException.class);
+        thrown.expectMessage("The provided delta is not a valid VCDIFF delta");
+        this.decoder.setBase("baseContent");
+        this.decoder.applyDelta(new byte[1]);
     }
 
     @Test
     public void applyDeltaThrowsIllegalArgumentExceptionWhenDeltaIsNotBase64EncodedAndIsBase64EncodedArgumentIsTrue() throws IOException {
-        try{
-            this.decoder.setBase("baseContent");
-            this.decoder.applyDelta("nonBase64Content", true);
-        } catch (IllegalArgumentException ex) {
-            assertEquals("The provided delta is not a valid VCDIFF delta", ex.getMessage());
-        }
+        thrown.expect(IllegalArgumentException.class);
+        thrown.expectMessage("The provided delta is not a valid VCDIFF delta");
+        this.decoder.setBase("baseContent");
+        this.decoder.applyDelta("nonBase64Content");
     }
 
     @Test
     public void applyDeltaThrowsIllegalArgumentExceptionWhenDeltaDoesNotContainsVcdiffHeaderAndIsBase64EncodedArgumentIsTrue() throws IOException {
-        try{
-            this.decoder.setBase("baseContent");
-            this.decoder.applyDelta("YmFzZTY0Q29udGVudA==", true);
-        } catch (IllegalArgumentException ex) {
-            assertEquals("The provided delta is not a valid VCDIFF delta", ex.getMessage());
-        }
+        thrown.expect(IllegalArgumentException.class);
+        thrown.expectMessage("The provided delta is not a valid VCDIFF delta");
+        this.decoder.setBase("baseContent");
+        this.decoder.applyDelta("YmFzZTY0Q29udGVudA==");
     }
 
     @Test
@@ -85,8 +79,8 @@ public class VcdiffDecoderTest {
         String delta = "1sPEAAABGgAoOAAeBAEsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4TGgEeAA==";
         String expectedResult = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
 
-        this.decoder.setBase(base, true);
-        DeltaApplicationResult deltaResult = this.decoder.applyDelta(delta, true);
+        this.decoder.setBase64Base(base);
+        DeltaApplicationResult deltaResult = this.decoder.applyDelta(delta);
 
         assertEquals(expectedResult, deltaResult.asUtf8String());
     }
