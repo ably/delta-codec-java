@@ -44,11 +44,15 @@ public class VcdiffDecoder {
             throw new IllegalArgumentException("The provided delta is not a valid VCDIFF delta");
         }
 
+        return new DeltaApplicationResult(applyDeltaInternal(deltaAsByteArray));
+    }
+
+    private byte[] applyDeltaInternal(byte[] deltaAsByteArray) throws IOException {
         ByteArrayOutputStream decoded = new ByteArrayOutputStream();
         this.decoder.decode(this.base, deltaAsByteArray, decoded);
         this.base = decoded.toByteArray();
         // Return a copy to avoid future delta application failures if the returned array is modified
-        return new DeltaApplicationResult(decoded.toByteArray());
+        return decoded.toByteArray();
     }
 
     /**
@@ -69,11 +73,8 @@ public class VcdiffDecoder {
         if (delta == null || !hasVcdiffHeader(delta)) {
             throw new IllegalArgumentException("The provided delta is not a valid VCDIFF delta");
         }
-        ByteArrayOutputStream decoded = new ByteArrayOutputStream();
-        this.decoder.decode(this.base, delta, decoded);
-        this.base = decoded.toByteArray();
-        // Return a copy to avoid future delta application failures if the returned array is modified
-        return new DeltaApplicationResult(decoded.toByteArray());
+
+        return new DeltaApplicationResult(applyDeltaInternal(delta));
     }
 
     /**
@@ -118,7 +119,7 @@ public class VcdiffDecoder {
 
     /**
      * Sets the base object used for the next delta application (see {@link VcdiffDecoder#applyDelta(byte[])}).
-     * @param newBase The base object to be set
+     * @param newBase The byte[] to be set as new base
      * @throws IllegalArgumentException The provided {@code newBase} parameter is null
      */
     public void setBase(byte[] newBase) throws IllegalArgumentException {
@@ -131,7 +132,7 @@ public class VcdiffDecoder {
 
     /**
      * Sets the base object used for the next delta application (see {@link VcdiffDecoder#applyDelta(String)}).
-     * @param newBase The base object to be set
+     * @param newBase The string to be set as new base
      * @throws IllegalArgumentException The provided {@code newBase} parameter is null
      */
     public void setBase(String newBase) throws IllegalArgumentException {
@@ -144,7 +145,7 @@ public class VcdiffDecoder {
 
     /**
      * Sets the base object used for the next delta application (see {@link VcdiffDecoder#applyDelta(String)}).
-     * @param newBase The base object to be set
+     * @param newBase The base64 string to be set as new base
      * @throws IllegalArgumentException The provided {@code newBase} parameter is null
      */
     public void setBase64Base(String newBase) throws IllegalArgumentException {
@@ -157,7 +158,7 @@ public class VcdiffDecoder {
 
     /**
      * Sets the base object used for the next delta application (see {@link VcdiffDecoder#applyDelta(String, String, String)}).
-     * @param newBase The base object to be set
+     * @param newBase The string to be set as new base
      * @param newBaseId (Optional) The {@code newBase}'s sequence ID, to be used for sequence continuity checking
      *                  when delta is applied using {@link VcdiffDecoder#applyDelta(String, String, String)}
      * @throws IllegalArgumentException The provided {@code newBase} parameter is null
@@ -169,7 +170,7 @@ public class VcdiffDecoder {
 
     /**
      * Sets the base object used for the next delta application (see {@link VcdiffDecoder#applyDelta(byte[], String, String)}).
-     * @param newBase The base object to be set
+     * @param newBase The byte[] to be set as new base
      * @param newBaseId (Optional) The {@code newBase}'s sequence ID, to be used for sequence continuity checking
      *                  when delta is applied using {@link VcdiffDecoder#applyDelta(byte[], String, String)}
      * @throws IllegalArgumentException The provided {@code newBase} parameter is null
@@ -181,7 +182,7 @@ public class VcdiffDecoder {
 
     /**
      * Sets the base object used for the next delta application (see {@link VcdiffDecoder#applyDelta(String, String, String)}).
-     * @param newBase The base object to be set
+     * @param newBase The base64 string to be set as new base
      * @param newBaseId (Optional) The {@code newBase}'s sequence ID, to be used for sequence continuity checking
      *                  when delta is applied using {@link VcdiffDecoder#applyDelta(String, String, String)}
      * @throws IllegalArgumentException The provided {@code newBase} parameter is null
