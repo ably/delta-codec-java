@@ -42,11 +42,11 @@ public class VcdiffDecoderTest {
     }
 
     @Test
-    public void applyDeltaThrowsIllegalStateExceptionWhenDeltaIsNotBase64Encoded() throws IOException {
-        thrown.expect(IllegalStateException.class);
-        thrown.expectMessage("The provided delta does not represent binary data");
+    public void applyDeltaThrowsIllegalArgumentExceptionWhenDeltaIsNotBase64Encoded() throws IOException {
+        thrown.expect(IllegalArgumentException.class);
+        thrown.expectMessage("The provided delta is not a valid VCDIFF delta");
         this.decoder.setBase("baseContent");
-        this.decoder.applyDelta("!deltaContent");
+        this.decoder.applyBase64Delta("!deltaContent");
     }
 
     @Test
@@ -62,7 +62,7 @@ public class VcdiffDecoderTest {
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("The provided delta is not a valid VCDIFF delta");
         this.decoder.setBase("baseContent");
-        this.decoder.applyDelta("nonBase64Content");
+        this.decoder.applyBase64Delta("nonBase64Content");
     }
 
     @Test
@@ -70,7 +70,7 @@ public class VcdiffDecoderTest {
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("The provided delta is not a valid VCDIFF delta");
         this.decoder.setBase("baseContent");
-        this.decoder.applyDelta("YmFzZTY0Q29udGVudA==");
+        this.decoder.applyBase64Delta("YmFzZTY0Q29udGVudA==");
     }
 
     @Test
@@ -80,7 +80,7 @@ public class VcdiffDecoderTest {
         String expectedResult = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
 
         this.decoder.setBase64Base(base);
-        DeltaApplicationResult deltaResult = this.decoder.applyDelta(delta);
+        DeltaApplicationResult deltaResult = this.decoder.applyBase64Delta(delta);
 
         assertEquals(expectedResult, deltaResult.asUtf8String());
     }
