@@ -5,6 +5,6 @@ package io.ably.deltacodec;
  */
 public class SequenceContinuityException extends Exception {
     SequenceContinuityException(String expectedId, String actualId) {
-        super("Sequence continuity check failed - the provided id (" + expectedId + ") does not match the last preserved sequence id (" + actualId + ")");
+        super("Sequence continuity check failed - the provided id (" + actualId + ") does not match the last preserved sequence id (" + expectedId + ")");
     }
 }

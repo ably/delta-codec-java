@@ -1,6 +1,6 @@
 package io.ably.deltasampleapp;
 
-import io.ably.deltacodec.VcdiffDecoder;
+import io.ably.deltacodec.CheckedVcdiffDecoder;
 import io.ably.lib.realtime.*;
 import io.ably.lib.types.AblyException;
 import io.ably.lib.types.Message;
@@ -10,7 +10,7 @@ public class Main {
     public static void main(String[] args) throws AblyException {
         AblyRealtime ably = new AblyRealtime("HG2KVw.AjZP_A:W7VXUG9yw1-Cza6u");
         Channel channel = ably.channels.get("[?delta=vcdiff]delta-sample-app");
-        VcdiffDecoder channelDecoder = new VcdiffDecoder();
+        CheckedVcdiffDecoder channelDecoder = new CheckedVcdiffDecoder();
         ably.connection.on(ConnectionState.connected, new ConnectionStateListener() {
             @Override
             public void onConnectionStateChanged(ConnectionStateChange state) {
