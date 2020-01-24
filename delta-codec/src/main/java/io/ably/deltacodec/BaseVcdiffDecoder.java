@@ -7,7 +7,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-class BaseVcdiffDecoder {
+abstract class BaseVcdiffDecoder {
     private final VCDiffDecoder decoder = VCDiffDecoderBuilder.builder().buildSimple();
     private byte[] base;
 
