@@ -36,7 +36,7 @@ abstract class BaseVcdiffDecoder {
     }
 
     protected void setBaseInternal(String newBase) throws IllegalArgumentException {
-        this.setBaseInternal(convertToByteArray(newBase));
+        this.setBaseInternal(tryConvertToByteArray(newBase));
     }
 
     protected void setBase64BaseInternal(String newBase) throws IllegalArgumentException {
@@ -52,17 +52,26 @@ abstract class BaseVcdiffDecoder {
     }
 
     private static boolean hasVcdiffHeader(byte[] delta) {
+        if (delta.length <= 4) {
+            return false;
+        }
         return delta[0] == (byte)0xd6 &&
                 delta[1] == (byte)0xc3 &&
                 delta[2] == (byte)0xc4 &&
                 delta[3] == (byte)0;
     }
 
-    private static byte[] convertToByteArray(String data) {
-        return data.getBytes(StandardCharsets.UTF_8);
+    private static byte[] tryConvertToByteArray(String str) {
+        if (str == null) {
+            return null;
+        }
+        return str.getBytes(StandardCharsets.UTF_8);
     }
 
     private static byte[] tryConvertFromBase64String(String str) {
+        if (str == null) {
+            return null;
+        }
         try {
             return Base64Coder.decode(str);
         } catch (IllegalArgumentException e) {
