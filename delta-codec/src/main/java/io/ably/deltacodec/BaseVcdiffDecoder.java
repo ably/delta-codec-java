@@ -11,6 +11,14 @@ abstract class BaseVcdiffDecoder {
     private final VCDiffDecoder decoder = VCDiffDecoderBuilder.builder().buildSimple();
     private byte[] base;
 
+    public static boolean isDelta(byte[] data) {
+        return hasVcdiffHeader(data);
+    }
+
+    public static boolean isBase64Delta(String data) {
+        return hasVcdiffHeader(tryConvertFromBase64String(data));
+    }
+
     protected DeltaApplicationResult applyDeltaInternal(byte[] delta) throws IllegalStateException, IllegalArgumentException, IOException {
         if (this.base == null) {
             throw new IllegalStateException("Uninitialized decoder - setBase() should be called first");
@@ -52,7 +60,7 @@ abstract class BaseVcdiffDecoder {
     }
 
     private static boolean hasVcdiffHeader(byte[] delta) {
-        if (delta.length <= 4) {
+        if (delta == null || delta.length <= 4) {
             return false;
         }
         return delta[0] == (byte)0xd6 &&
