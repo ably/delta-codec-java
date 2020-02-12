@@ -1,4 +1,5 @@
 # Java Codec Library for the VCDIFF Delta Format
+[![Build Status](https://travis-ci.org/ably/delta-codec-java.svg?branch=master)](https://travis-ci.org/ably/delta-codec-java)
 
 ## Overview
 
