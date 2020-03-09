@@ -37,22 +37,159 @@ repositories {
 }
 ```
 
-## Use
 
-The `VcdiffDecoder` class is the entry point to the public API. It provides a stateful and stateless way of applying `vcdiff` deltas.
+## General Use
 
-### Stateful Delta Application
+The `VcdiffDecoder` class is an entry point to the public API. It provides a stateful way of applying a stream of `vcdiff` deltas.
 
+`VcdiffDecoder` can do the necessary bookkeeping in the scenario where a number of successive deltas/patches have to be applied where each of them represents the difference to the previous one (e.g. a sequence of messages each of which represents a set of mutations to a given JavaScript object; i.e. sending only the mutations of an object instead the full object each time).
 
+In order to benefit from the bookkeeping provided by the `VcdiffDecoder` class one has to first provide the base object that the first delta would be generated against. That could be done using the `setBase` method. The most simple flavor of `setBase` is:
 
-### Stateless Delta Application
+```
+VcdiffDecoder decoder = new VcdiffDecoder();
+decoder.setBase(baseObject /*the base object/message*/);
+```
 
+Once the decoder is initialized like this it could be used to apply a stream of deltas/patches each one resulting in a new full payload. E.g. for binary objects/messages:
 
+```
+byte[] result = decoder.applyDelta(vcdiffDelta).asByteArray();
+```
 
+or for string objects/messages:
 
+```
+string result = decoder.applyDelta(vcdiffDelta).asUtf8String();
+```
 
+`applyDelta` could be called as many times as needed. The `VcdiffDecoder` will automatically retain the last delta application result and use it as a base for the next delta application. Thus it allows applying an infinite sequence of deltas.
 
+`applyDelta` return type is `DeltaApplicationResult`. That is a convenience class that allows interpreting the result in various data formats - string, array, etc.
 
+`CheckedVcdiffDecoder` is a flavor of `VcdiffDecoder` that could be used if deltas and objects against which deltas are generated have unique IDs. `CheckedVcdiffDecoder`'s `setBase` and `applyDelta` methods require these IDs and make sure the deltas are applied to the objects they were generated against. E.g.
+
+```
+DeltaApplicationResult result = checkedDecoder.applyDelta(vcdiffDelta, 
+                deltaID,/*any unique identifier of the delta there might be*/ 
+                baseID/*any unique identifier of the object this delta was generated against there might be */);
+```
+
+There are `base64` flavors of `setBase` and `applyDelta` that would accept `base64` encoded input - `setBase64Base` and `applyBase64Delta`. These are convenience methods and they follow the same logic as `setBase` and `applyDelta`.
+
+## Common Use Cases
+
+### Ably Related
+
+#### MQTT with Binary Payload
+
+This is a simple example of how one can utilize the `delta-codec-java` to handle delta messages received by Ably via MQTT
+
+```
+public class Main {
+    public static void main(String[] args) {
+        final String channelName = "sample-app-mqtt";
+        final Mqtt3AsyncClient client = createClient();
+        final VcdiffDecoder channelDecoder = new VcdiffDecoder();
+
+        connect(client, () -> {
+            subscribe(client, "[?delta=vcdiff]" + channelName, (payload) -> {
+                byte[] data;
+                try {
+                    if (VcdiffDecoder.isDelta(payload)) {
+                        data = channelDecoder.applyDelta(payload).asByteArray();
+                    } else {
+                        data = payload;
+                        channelDecoder.setBase(data);
+                    }
+                } catch (Throwable error) {
+                    /* Delta decoder error */
+                    System.out.println(error.getMessage());
+                    return;
+                }
+
+                /* Process decoded data */
+                System.out.println(Arrays.toString(data));
+            });
+        });
+    }
+
+    private static Mqtt3AsyncClient createClient() {
+        return Mqtt3Client.builder()
+                .serverHost("mqtt.ably.io")
+                .serverPort(8883)
+                .sslWithDefaultConfig()
+                .simpleAuth(
+                        Mqtt3SimpleAuth.builder()
+                                .username("FIRST_HALF_OF_API_KEY")
+                                .password("SECOND_HALF_OF_API_KEY".getBytes(StandardCharsets.UTF_8))
+                                .build()
+                )
+                .buildAsync();
+    }
+
+    private static void connect(Mqtt3AsyncClient client, Runnable callback) {
+        client.connect().whenComplete((mqtt3ConnAck, throwable) -> {
+            if (throwable != null) {
+                System.out.println("Connect failed - " + throwable.getMessage());
+                return;
+            }
+
+            callback.run();
+        });
+    }
+
+    private static void subscribe(Mqtt3AsyncClient client, String channelName, Consumer<byte[]> callback) {
+        client.subscribeWith()
+                .topicFilter(channelName)
+                .qos(MqttQos.AT_MOST_ONCE)
+                .callback(mqtt3Publish -> callback.accept(mqtt3Publish.getPayloadAsBytes()))
+                .send();
+    }
+}
+
+```
+
+### Non Ably Related
+
+#### Object Mutations Store/Retrieve
+
+VCDiff encoded deltas could be used to efficiently store the history of the mutations of a given instance of a class. Instead of preserving full copies of the instance state at various points of time in its existence one could preserve just the differences between two successive copies, i.e. the delta. The following method can then be used to restore the full copies of the object with the help of `delta-codec-java` lib:
+
+```
+    Foo[] getObjectMutationsHistory(Foo initialState, 
+                                byte[][] objectMutationsDeltas /*array of vcdiff deltas computed between each two successive states of the base object with deltas being computed on JSON serialized object */) {
+
+        final VcdiffDecoder stateDecoder = new DeltaCodec.VcdiffDecoder();
+
+        stateDecoder.setBase(initialState);
+        List<Foo> objectMutations = new ArrayList<Foo>(objectMutationsDeltas.length]);
+        
+        for(byte[] state : objectMutationsDeltas) {
+            try {
+                String jsonSerializedObject = stateDecoder.applyDelta(state).asUtf8String();
+                objectMutations.add(JSON.parse(serialzedObject));
+            }
+            catch (e) {
+                console.log(e);
+                /* Delta decoder error */
+            }
+        }
+        
+        objectMutationsDeltas.forEach(state => {
+            try {
+                let serialzedObject = stateDecoder.applyDelta(state).asUtf8String();
+                objectMutations.push(JSON.parse(serialzedObject));
+            }  catch (Throwable error) {
+                    /* Delta decoder error */
+                    System.out.println(error.getMessage());
+                    return;
+            }
+        });
+        
+        return objectMutations.toArray();
+    }
+```
 
 ## Building ##
 
