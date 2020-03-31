@@ -35,25 +35,21 @@ public class Main {
                 /* Process decoded data */
                 System.out.println(Arrays.toString(data));
             });
-
-            publish(client, channelName, new byte[] { 76, 111, 114, 101, 109, 32, 105, 112, 115, 117, 109, 32, 100, 111, 108, 111, 114, 32, 115, 105, 116, 32, 97, 109, 101, 116 });
-            publish(client, channelName, new byte[] { 76, 111, 114, 101, 109, 32, 105, 112, 115, 117, 109, 32, 100, 111, 108, 111, 114, 32, 115, 105, 116, 32, 97, 109, 101, 116, 44, 32, 99, 111, 110, 115, 101, 99, 116, 101, 116, 117, 114, 32, 97, 100, 105, 112, 105, 115, 99, 105, 110, 103, 32, 101, 108, 105, 116, 46 });
-            publish(client, channelName, new byte[] { 76, 111, 114, 101, 109, 32, 105, 112, 115, 117, 109, 32, 100, 111, 108, 111, 114, 32, 115, 105, 116, 32, 97, 109, 101, 116, 44, 32, 99, 111, 110, 115, 101, 99, 116, 101, 116, 117, 114, 32, 97, 100, 105, 112, 105, 115, 99, 105, 110, 103, 32, 101, 108, 105, 116, 46, 32, 70, 117, 115, 99, 101, 32, 105, 100, 32, 110, 117, 108, 108, 97, 32, 108, 97, 99, 105, 110, 105, 97, 44, 32, 118, 111, 108, 117, 116, 112, 97, 116, 32, 111, 100, 105, 111, 32, 117, 116, 44, 32, 117, 108, 116, 114, 105, 99, 101, 115, 32, 108, 105, 103, 117, 108, 97, 46 });
         });
     }
 
     private static Mqtt3AsyncClient createClient() {
         return Mqtt3Client.builder()
-                .serverHost("mqtt.ably.io")
-                .serverPort(8883)
-                .sslWithDefaultConfig()
-                .simpleAuth(
-                        Mqtt3SimpleAuth.builder()
-                                .username("FIRST_HALF_OF_API_KEY")
-                                .password("SECOND_HALF_OF_API_KEY".getBytes(StandardCharsets.UTF_8))
-                                .build()
-                )
-                .buildAsync();
+            .serverHost("mqtt.ably.io")
+            .serverPort(8883)
+            .sslWithDefaultConfig()
+            .simpleAuth(
+                Mqtt3SimpleAuth.builder()
+                    .username("FIRST_HALF_OF_API_KEY")
+                    .password("SECOND_HALF_OF_API_KEY".getBytes(StandardCharsets.UTF_8))
+                    .build()
+            )
+            .buildAsync();
     }
 
     private static void connect(Mqtt3AsyncClient client, Runnable callback) {
@@ -69,17 +65,9 @@ public class Main {
 
     private static void subscribe(Mqtt3AsyncClient client, String channelName, Consumer<byte[]> callback) {
         client.subscribeWith()
-                .topicFilter(channelName)
-                .qos(MqttQos.AT_MOST_ONCE)
-                .callback(mqtt3Publish -> callback.accept(mqtt3Publish.getPayloadAsBytes()))
-                .send();
-    }
-
-    private static void publish(Mqtt3AsyncClient client, String channelName, byte[] data) {
-        client.publishWith()
-                .topic(channelName)
-                .qos(MqttQos.AT_MOST_ONCE)
-                .payload(data)
-                .send();
+            .topicFilter(channelName)
+            .qos(MqttQos.AT_MOST_ONCE)
+            .callback(mqtt3Publish -> callback.accept(mqtt3Publish.getPayloadAsBytes()))
+            .send();
     }
 }
